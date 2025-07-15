@@ -7,7 +7,7 @@ API_ID = 26254064
 API_HASH = "72541d6610ae7730e6135af9423b319c"
 BOT_TOKEN = ""
 #Logs
-LOG_CHANNEL = "-1002172487703" 
+LOG_CHANNEL = "-1002197279542" 
 # MongoDB setup
 MONGO_URL = "mongodb+srv://abidabdullahown7:abidabdullah1425@cluster0.7lgug.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 DB_NAME = "AnimeDB"
