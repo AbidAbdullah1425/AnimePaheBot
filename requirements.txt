@@ -1,3 +1,4 @@
+aiohttp
 #...For Bot Library...#
 pyrogram
 #...For Web Scraping...#
