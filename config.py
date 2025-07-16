@@ -9,14 +9,14 @@ from logging.handlers import RotatingFileHandler
 
 API_ID = int(os.environ.get("API_ID", "26254064"))
 API_HASH = os.environ.get("API_HASH", "72541d6610ae7730e6135af9423b319c")
-BOT_TOKEN = os.environ.get("BOT_TOKEN", ""
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 #Logs
 LOG_CHANNEL = int(os.environ.get("LOG_CHANNEL", "-1002197279542"))
 # MongoDB setup
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb+srv://abidabdullahown7:abidabdullah1425@cluster0.7lgug.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-DB_NAME = os.environ.get("DB_NAME", "AnimeDB"
+MONGO_URL = os.environ.get("MONGO_URL", "mongodb+srv://abidabdullahown7:abidabdullah1425@cluster0.7lgug.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+DB_NAME = os.environ.get("DB_NAME", "AnimeDB")
 
-DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "./downloads"
+DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "./downloads")
 #ADMIN INFO
 ADMIN = int(os.environ.get("ADMIN", "5296584067"))
 
