@@ -210,13 +210,13 @@ def change_upload_method(client, callback_query):
 
 @Bot.on_callback_query(filters.regex(r"^dl_"))
 def download_and_upload_file(client, callback_query):
-    download_url = callback_query.data.split("dl_")[1]
-    kwik_link = extract_kwik_link(download_url)
-
     try:
+        download_url = callback_query.data.split("dl_")[1]
+        kwik_link = extract_kwik_link(download_url)
         direct_link = get_dl_link(kwik_link)
+
     except Exception as e:
-        callback_query.message.reply_text(f"Error generating download link: {str(e)}")
+    await callback_query.message.reply_text(f"Error: {str(e)}")
         return
     username = callback_query.from_user.username or "Unknown User"
     user_id = callback_query.from_user.id
