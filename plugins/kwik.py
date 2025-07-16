@@ -1,7 +1,27 @@
 #..........This Bot Made By [RAHAT](https://t.me/r4h4t_69)..........#
 #..........Anyone Can Modify This As He Likes..........#
 #..........Just one requests do not remove my credit..........#
-import requests
+
+from plugins.headers import session  # Use your session with headers!
+from bs4 import BeautifulSoup
+
+def extract_kwik_link(url):
+    try:
+        resp = session.get(url)
+        resp.raise_for_status()
+
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        button = soup.find("a", class_="btn btn-secondary btn-block redirect")
+        if button and button.has_attr("href"):
+            return button["href"]
+        return "No kwik.si link found in the page."
+    except Exception as e:
+        return f"Error extracting kwik link: {str(e)}"
+
+
+
+
+'''import requests
 from bs4 import BeautifulSoup
 import re
 
@@ -23,5 +43,5 @@ def extract_kwik_link(url):
         return "No kwik.si link found in the page."
     
     except Exception as e:
-        return f"Error extracting kwik link: {str(e)}"
+        return f"Error extracting kwik link: {str(e)}"'''
 
