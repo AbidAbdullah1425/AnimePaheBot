@@ -12,7 +12,7 @@ from datetime import datetime
 import pyrogram.utils
 pyrogram.utils.MIN_CHANNEL_ID = -1009147483647
 
-from config import API_HASH, API_ID, BOT_TOKEN, LOG_CHANNEL, ADMIN, TG_BOT_WORKERS, LOGGER
+from config import API_HASH, API_ID, BOT_TOKEN, LOG_CHANNEL, ADMIN, TG_BOT_WORKERS, LOGGER, PORT
 from pyrogram import utils as pyroutils
 pyroutils.MIN_CHANNEL_ID = LOG_CHANNEL
 
