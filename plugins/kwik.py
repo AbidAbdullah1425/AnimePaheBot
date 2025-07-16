@@ -8,6 +8,8 @@ from playwright.async_api import async_playwright
 
 # Function to extract kwik link
 def extract_kwik_link(url):
+    if "pahe.win" in url:
+        return asyncio.run(playwright_extract_kwik(url))
     try:
         response = requests.get(url)
         response.raise_for_status()  # Ensure we got a valid response
