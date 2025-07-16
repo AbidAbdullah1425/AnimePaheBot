@@ -3,6 +3,7 @@
 #..........Just one requests do not remove my credit..........#
 
 from pyrogram import Client, filters
+from bot import Bot
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from plugins.queue import add_to_queue, remove_from_queue
 from plugins.kwik import extract_kwik_link
@@ -19,7 +20,7 @@ import re
 episode_data = {}
 episode_urls = {}
 
-@Client.on_callback_query(filters.regex(r"^anime_"))
+@Bot.on_callback_query(filters.regex(r"^anime_"))
 def anime_details(client, callback_query):
     session_id = callback_query.data.split("anime_")[1]
 
@@ -27,7 +28,7 @@ def anime_details(client, callback_query):
     query = user_queries.get(callback_query.message.chat.id, "")
     search_url = f"https://animepahe.ru/api?m=search&q={query.replace(' ', '+')}"
     response = session.get(search_url).json()
-    
+
     anime = next(anime for anime in response['data'] if anime['session'] == session_id)
     title = anime['title']
     anime_type = anime['type']
@@ -67,7 +68,7 @@ def anime_details(client, callback_query):
         reply_markup=episode_button
     )
 # Callback for episode list with pagination (send buttons once)
-@Client.on_callback_query(filters.regex(r"^episodes$"))
+@Bot.on_callback_query(filters.regex(r"^episodes$"))
 def episode_list(client, callback_query, page=1):
     session_data = episode_data.get(callback_query.message.chat.id)
 
@@ -115,7 +116,7 @@ def episode_list(client, callback_query, page=1):
         callback_query.message.edit_reply_markup(reply_markup)
 
 # Callback to handle navigation between pages (edit buttons in place)
-@Client.on_callback_query(filters.regex(r"^page_"))
+@Bot.on_callback_query(filters.regex(r"^page_"))
 def navigate_pages(client, callback_query):
     new_page = int(callback_query.data.split("_")[1])
     session_data = episode_data.get(callback_query.message.chat.id)
@@ -138,11 +139,11 @@ def navigate_pages(client, callback_query):
 
 
 # Callback for episode link and fetching download links
-@Client.on_callback_query(filters.regex(r"^ep_"))
+@Bot.on_callback_query(filters.regex(r"^ep_"))
 def fetch_download_links(client, callback_query):
     episode_number = int(callback_query.data.split("_")[1])
     user_id = callback_query.message.chat.id  # Unique per user
-    
+
     session_data = episode_data.get(user_id)
 
     if not session_data or 'episodes' not in session_data:
@@ -181,33 +182,33 @@ def fetch_download_links(client, callback_query):
     reply_markup = InlineKeyboardMarkup(download_buttons)
     callback_query.message.reply_text("Select a download link:", reply_markup=reply_markup)
 
-@Client.on_callback_query(filters.regex(r"set_method_"))
+@Bot.on_callback_query(filters.regex(r"set_method_"))
 def change_upload_method(client, callback_query):
     user_id = callback_query.from_user.id
     data = callback_query.data.split("_")[2]  # Extract 'document' or 'video'
-    
+
     # Update the selected method in the database
     save_upload_method(user_id, data)
-    
+
     # Acknowledge the change
     callback_query.answer(f"Upload method set to {data.capitalize()}")
-    
+
     # Update the buttons with the new selection
     document_status = "✅" if data == "document" else "❌"
     video_status = "✅" if data == "video" else "❌"
-    
+
     buttons = [
         [
             InlineKeyboardButton(f"Document ({document_status})", callback_data="set_method_document"),
             InlineKeyboardButton(f"Video ({video_status})", callback_data="set_method_video")
         ]
     ]
-    
+
     reply_markup = InlineKeyboardMarkup(buttons)
     callback_query.message.edit_reply_markup(reply_markup)
 
 
-@Client.on_callback_query(filters.regex(r"^dl_"))
+@Bot.on_callback_query(filters.regex(r"^dl_"))
 def download_and_upload_file(client, callback_query):
     download_url = callback_query.data.split("dl_")[1]
     kwik_link = extract_kwik_link(download_url)
@@ -235,12 +236,12 @@ def download_and_upload_file(client, callback_query):
     resolution = re.search(r"\b\d{3,4}p\b", download_button_title)
     resolution = resolution.group() if resolution else download_button_title
     if 'eng' in download_button_title:
-	    type = "Dub"
+            type = "Dub"
     else:
-	    type = "Sub"
+            type = "Sub"
     # Create the filename
     title = f"{title}"
-    short_name = create_short_name(title)	
+    short_name = create_short_name(title)        
     file_name = f"[{type}] [{short_name}] [EP {episode_number}] [{resolution}]"
     file_name = file_name + ".mp4"
     filename = sanitize_filename(file_name)
@@ -255,7 +256,7 @@ def download_and_upload_file(client, callback_query):
     #callback_query.message.reply_text(f"Added to queue: {file_name}. Downloading now...")
     #dl_msg = callback_query.message.reply_text(f"<b>Added to queue:</b>\n <pre language="python">{file_name}</pre>\n<b>Downloading now...</b>")
     dl_msg = callback_query.message.reply_text(f"<b>Added to queue:</b>\n <pre>{file_name}</pre>\n<b>Downloading now...</b>")
-    
+
     try:
         # Download the file
         download_file(direct_link, download_path)
@@ -294,7 +295,7 @@ def download_and_upload_file(client, callback_query):
         callback_query.message.reply_text(f"Error: {str(e)}")
 
 # Callback query handler for Help and Close buttons
-@Client.on_callback_query()
+@Bot.on_callback_query()
 def callback_query_handler(client, callback_query):
     if callback_query.data == "help":
         # Send the help message
@@ -302,7 +303,7 @@ def callback_query_handler(client, callback_query):
             text="Here is how to use the bot:\n\n1. /anime <anime_name> - Search for an anime.\n2. /set_thumb - Set a custom thumbnail.\n3. /options - Set upload options (Document or Video).\n4. /queue - View active downloads.\n5. /set_caption - Set custom caption.\n6. /see_caption - See current custom caption.\n7. /del_caption - Delect current custom caption",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Close", callback_data="close")]])
         )
-    
+
     elif callback_query.data == "close":
         # Close the panel by deleting the message
         callback_query.message.delete()
