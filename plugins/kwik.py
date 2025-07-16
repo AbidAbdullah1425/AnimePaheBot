@@ -4,6 +4,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+import asyncio
 from playwright.async_api import async_playwright
 
 # Function to extract kwik link
@@ -27,3 +28,23 @@ def extract_kwik_link(url):
     
     except Exception as e:
         return f"Error extracting kwik link: {str(e)}"
+
+
+
+
+
+
+
+async def playwright_extract_kwik(url):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.goto(url)
+        # Wait and click the correct "Continue" button
+        await page.wait_for_selector('a.btn.btn-secondary.btn-block.redirect')
+        await page.click('a.btn.btn-secondary.btn-block.redirect')
+        # Wait for possible redirect or for the next page to load
+        await page.wait_for_url(lambda u: "kwik" in u)
+        kwik_url = page.url
+        await browser.close()
+        return kwik_url
