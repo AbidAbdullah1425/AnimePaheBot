@@ -1,2 +1,2 @@
 #use this if you deploying bot as worker
-python3 bot.py
+python3 main.py
