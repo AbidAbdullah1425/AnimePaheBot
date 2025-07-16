@@ -7,6 +7,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
+# Install Playwright browser (Chromium only)
+RUN python -m playwright install chromium
+
 COPY . /app
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
