@@ -4,6 +4,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+from playwright.async_api import async_playwright
 
 # Function to extract kwik link
 def extract_kwik_link(url):
