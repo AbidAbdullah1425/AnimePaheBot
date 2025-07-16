@@ -3,6 +3,7 @@
 #..........Just one requests do not remove my credit..........#
 
 from pyrogram import Client, filters
+from bot import Bot
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import pyrogram.errors
 from bs4 import BeautifulSoup
@@ -16,7 +17,7 @@ import asyncio
 user_queries = {}
 
 
-@Client.on_message(filters.command("start") & filters.private)
+@Bot.on_message(filters.command("start") & filters.private)
 def start(client, message):
     # Choose a random image from the list
     id = message.from_user.id
@@ -27,7 +28,7 @@ def start(client, message):
             client.send_message(-1002457905787, f"{e}")
             pass
     start_pic = random.choice(START_PIC)
-    
+
     # Create inline buttons
     buttons = [
         [
@@ -39,7 +40,7 @@ def start(client, message):
         ]
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
-    
+
     # Send the welcome message with the random image and inline buttons
     client.send_photo(
         chat_id=message.chat.id,
@@ -48,13 +49,13 @@ def start(client, message):
         reply_markup=reply_markup
     )
 
-@Client.on_message(filters.command("set_thumb") & filters.private)
+@Bot.on_message(filters.command("set_thumb") & filters.private)
 def set_thumbnail(client, message):
     # Check if the message is a reply
     if not message.reply_to_message:
         message.reply_text("Please reply to a photo with this command.")
         return
-    
+
     # Check if the reply is to a photo
     if not message.reply_to_message.photo:
         message.reply_text("Please reply to a photo with this command.")
@@ -66,7 +67,7 @@ def set_thumbnail(client, message):
     message.reply_text("Thumbnail saved successfully!")
 
 # Command: See thumbnail
-@Client.on_message(filters.command("see_thumb") & filters.private)
+@Bot.on_message(filters.command("see_thumb") & filters.private)
 def see_thumbnail(client, message):
     thumbnail = get_thumbnail(message.from_user.id)
     if thumbnail:
@@ -75,15 +76,15 @@ def see_thumbnail(client, message):
         message.reply_text("No custom thumbnail found in the database.")
 
 # Command: Delete thumbnail
-@Client.on_message(filters.command("del_thumb") & filters.private)
+@Bot.on_message(filters.command("del_thumb") & filters.private)
 def del_thumbnail(client, message):
     if get_thumbnail(message.from_user.id):
         delete_thumbnail(message.from_user.id)
         message.reply_text("Custom thumbnail deleted successfully!")
     else:
         message.reply_text("No custom thumbnail found in the database.")
-        
-@Client.on_message(filters.command("set_caption") & filters.private)
+
+@Bot.on_message(filters.command("set_caption") & filters.private)
 def save_caption_command(client, message):
     # Check if the message is a reply and if the replied message contains text
     if message.reply_to_message and message.reply_to_message.text:
@@ -93,10 +94,10 @@ def save_caption_command(client, message):
     else:
         # If the message is not a reply or doesn't contain text, send an error message
         message.reply_text("Please reply to a text message to save it as a caption.")
-    
-    
+
+
  # Command: See caption
-@Client.on_message(filters.command("see_caption") & filters.private)
+@Bot.on_message(filters.command("see_caption") & filters.private)
 def see_caption_command(client, message):
     caption = get_caption(message.from_user.id)
     if caption:
@@ -104,24 +105,24 @@ def see_caption_command(client, message):
     else:
         message.reply_text("No custom caption found in the database.")   
 # Command: Delete caption
-@Client.on_message(filters.command("del_caption") & filters.private)
+@Bot.on_message(filters.command("del_caption") & filters.private)
 def delete_caption_command(client, message):
     if get_caption(message.from_user.id):
         delete_caption(message.from_user.id)
         message.reply_text("Custom caption deleted successfully!")
     else:
         message.reply_text("No custom caption found in the database.")
-        
-        
-@Client.on_message(filters.command("options") & filters.private)
+
+
+@Bot.on_message(filters.command("options") & filters.private)
 def set_upload_options(client, message):
     user_id = message.from_user.id
     current_method = get_upload_method(user_id)
-    
+
     # Set checkmarks based on current selection
     document_status = "✅" if current_method == "document" else "❌"
     video_status = "✅" if current_method == "video" else "❌"
-    
+
     # Inline buttons for options
     buttons = [
         [
@@ -129,13 +130,13 @@ def set_upload_options(client, message):
             InlineKeyboardButton(f"Video ({video_status})", callback_data="set_method_video")
         ]
     ]
-    
+
     reply_markup = InlineKeyboardMarkup(buttons)
     message.reply_text(f"Your Current Upload Method: {current_method.capitalize()}", reply_markup=reply_markup)
 
 
 # Command: Search anime
-@Client.on_message(filters.command("anime") & filters.private)
+@Bot.on_message(filters.command("anime") & filters.private)
 def search_anime(client, message):
     id = message.from_user.id
     if not present_user(id):
@@ -173,18 +174,18 @@ def search_anime(client, message):
         reply_markup=reply_markup,
         quote=True
     )
-    
-    
+
+
 WAIT_MSG = """"<b>Processing ...</b>"""
 REPLY_ERROR = """<code>Use this command as a replay to any telegram message with out any spaces.</code>"""    
-@Client.on_message(filters.command('users') & filters.private & filters.user(ADMIN))
+@Bot.on_message(filters.command('users') & filters.private & filters.user(ADMIN))
 def get_users(client, message):
-  	msg = client.send_message(chat_id=message.chat.id, text=WAIT_MSG)
-  	users = full_userbase()
-  	msg.edit(f"{len(users)} users are using this bot")
-    
-    
-@Client.on_message(filters.private & filters.command('broadcast') & filters.user(ADMIN))
+          msg = client.send_message(chat_id=message.chat.id, text=WAIT_MSG)
+          users = full_userbase()
+          msg.edit(f"{len(users)} users are using this bot")
+
+
+@Bot.on_message(filters.private & filters.command('broadcast') & filters.user(ADMIN))
 async def send_text(client, message):
     if message.reply_to_message:
         query = full_userbase()
@@ -194,7 +195,7 @@ async def send_text(client, message):
         blocked = 0
         deleted = 0
         unsuccessful = 0
-        
+
         pls_wait = await message.reply("<i>Broadcasting Message.. This will Take Some Time</i>")
         for chat_id in query:
             try:
@@ -214,7 +215,7 @@ async def send_text(client, message):
                 unsuccessful += 1
                 pass
             total += 1
-        
+
         status = f"""<b><u>Broadcast Completed</u>
 
 Total Users: <code>{total}</code>
@@ -222,15 +223,15 @@ Successful: <code>{successful}</code>
 Blocked Users: <code>{blocked}</code>
 Deleted Accounts: <code>{deleted}</code>
 Unsuccessful: <code>{unsuccessful}</code></b>"""
-        
+
         return await pls_wait.edit(status)
 
     else:
         msg = await message.reply(REPLY_ERROR)
         await asyncio.sleep(8)
         await msg.delete()
-    
-@Client.on_message(filters.command("queue") & filters.private)
+
+@Bot.on_message(filters.command("queue") & filters.private)
 def view_queue(client, message):
     with download_lock:
         if not global_queue:
@@ -251,7 +252,7 @@ def view_queue(client, message):
 
         message.reply_text(queue_text, disable_web_page_preview=True)
 
-@Client.on_message(filters.command("latest") & filters.private)
+@Bot.on_message(filters.command("latest") & filters.private)
 def send_latest_anime(client, message):
     try:
         # Fetch the latest airing anime from AnimePahe
@@ -279,13 +280,13 @@ def send_latest_anime(client, message):
             message.reply_text(latest_anime_text, disable_web_page_preview=True)
         else:
             message.reply_text(f"Failed to fetch data from the API. Status code: {response.status_code}")
-    
+
     except Exception as e:
         client.send_message(-1002457905787, f"Error: {e}")
         message.reply_text("Something went wrong. Please try again later.")
 
 
-@Client.on_message(filters.command("airing") & filters.private)
+@Bot.on_message(filters.command("airing") & filters.private)
 def send_latest_anime(client, message):
     try:
         # Fetch the latest airing anime from AnimePahe
@@ -319,5 +320,3 @@ def send_latest_anime(client, message):
         # Log the error and notify the user
         #client.send_message(-1002457905787, f"Error: {e}")
         message.reply_text("Something went wrong. Please try again later.")
-
-        
