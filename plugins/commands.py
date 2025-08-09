@@ -16,7 +16,7 @@ import asyncio
 user_queries = {}
 
 
-@Client.on_message(filters.command("start") & filters.private)
+@Client.on_message(filters.command("start") & filters.private & filters.user(ADMIN))
 def start(client, message):
     # Choose a random image from the list
     id = message.from_user.id
@@ -48,7 +48,7 @@ def start(client, message):
         reply_markup=reply_markup
     )
 
-@Client.on_message(filters.command("set_thumb") & filters.private)
+@Client.on_message(filters.command("set_thumb") & filters.private & filters.user(ADMIN))
 def set_thumbnail(client, message):
     # Check if the message is a reply
     if not message.reply_to_message:
@@ -66,7 +66,7 @@ def set_thumbnail(client, message):
     message.reply_text("Thumbnail saved successfully!")
 
 # Command: See thumbnail
-@Client.on_message(filters.command("see_thumb") & filters.private)
+@Client.on_message(filters.command("see_thumb") & filters.private & filters.user(ADMIN))
 def see_thumbnail(client, message):
     thumbnail = get_thumbnail(message.from_user.id)
     if thumbnail:
@@ -104,7 +104,7 @@ def see_caption_command(client, message):
     else:
         message.reply_text("No custom caption found in the database.")   
 # Command: Delete caption
-@Client.on_message(filters.command("del_caption") & filters.private)
+@Client.on_message(filters.command("del_caption") & filters.private & filters.user(ADMIN))
 def delete_caption_command(client, message):
     if get_caption(message.from_user.id):
         delete_caption(message.from_user.id)
@@ -135,7 +135,7 @@ def set_upload_options(client, message):
 
 
 # Command: Search anime
-@Client.on_message(filters.command("anime") & filters.private)
+@Client.on_message(filters.command("anime") & filters.private & filters.user(ADMIN))
 def search_anime(client, message):
     id = message.from_user.id
     if not present_user(id):
@@ -230,7 +230,7 @@ Unsuccessful: <code>{unsuccessful}</code></b>"""
         await asyncio.sleep(8)
         await msg.delete()
     
-@Client.on_message(filters.command("queue") & filters.private)
+@Client.on_message(filters.command("queue") & filters.private & filters.user(ADMIN))
 def view_queue(client, message):
     with download_lock:
         if not global_queue:
@@ -251,7 +251,7 @@ def view_queue(client, message):
 
         message.reply_text(queue_text, disable_web_page_preview=True)
 
-@Client.on_message(filters.command("latest") & filters.private)
+@Client.on_message(filters.command("latest") & filters.private & filters.user(ADMIN))
 def send_latest_anime(client, message):
     try:
         # Fetch the latest airing anime from AnimePahe
@@ -285,7 +285,7 @@ def send_latest_anime(client, message):
         message.reply_text("Something went wrong. Please try again later.")
 
 
-@Client.on_message(filters.command("airing") & filters.private)
+@Client.on_message(filters.command("airing") & filters.private & filters.user(ADMIN))
 def send_latest_anime(client, message):
     try:
         # Fetch the latest airing anime from AnimePahe
