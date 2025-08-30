@@ -18,50 +18,7 @@ import re
 episode_data = {}
 episode_urls = {}
 
-@Client.on_callback_query(filters.regex(r"^episodes$"))
-def episode_list(client, callback_query, page=1):
-    session_data = episode_data.get(callback_query.message.chat.id)
 
-    if not session_data:
-        callback_query.message.reply_text("Session ID not found.")
-        return
-
-    session_id = session_data['session_id']
-    episodes_url = f"https://animepahe.ru/api?m=release&id={session_id}&sort=episode_asc&page={page}"
-    response = session.get(episodes_url).json()
-
-    last_page = int(response["last_page"])
-    episodes = response['data']
-
-    episode_data[callback_query.message.chat.id]['current_page'] = page
-    episode_data[callback_query.message.chat.id]['last_page'] = last_page
-    episode_data[callback_query.message.chat.id]['episodes'] = {ep['episode']: ep['session'] for ep in episodes}
-
-    # Create episode buttons as before
-    episode_buttons = [
-        [InlineKeyboardButton(f"Episode {ep['episode']}", callback_data=f"ep_{ep['episode']}")]
-        for ep in episodes
-    ]
-
-    # Add "Download All Episodes" button at the top
-    episode_buttons.insert(0, [InlineKeyboardButton("⬇️ Download All Episodes", callback_data="dl_all")])
-
-    # Add navigation buttons for pagination
-    nav_buttons = []
-    if page > 1:
-        nav_buttons.append(InlineKeyboardButton("<", callback_data=f"page_{page - 1}"))
-    if page < last_page:
-        nav_buttons.append(InlineKeyboardButton(">", callback_data=f"page_{page + 1}"))
-
-    if nav_buttons:
-        episode_buttons.append(nav_buttons)
-
-    reply_markup = InlineKeyboardMarkup(episode_buttons)
-
-    if callback_query.message.reply_markup is None:
-        callback_query.message.reply_text(f"Page {page}/{last_page}: Select an episode:", reply_markup=reply_markup)
-    else:
-        callback_query.message.edit_reply_markup(reply_markup)
 
 @Client.on_callback_query(filters.regex(r"^anime_"))
 def anime_details(client, callback_query):
@@ -123,22 +80,21 @@ def episode_list(client, callback_query, page=1):
     episodes_url = f"https://animepahe.ru/api?m=release&id={session_id}&sort=episode_asc&page={page}"
     response = session.get(episodes_url).json()
 
-    # Store the total number of pages
     last_page = int(response["last_page"])
     episodes = response['data']
 
-    # Update the current page for the user
     episode_data[callback_query.message.chat.id]['current_page'] = page
     episode_data[callback_query.message.chat.id]['last_page'] = last_page
-
-    # Store episode data for each user
     episode_data[callback_query.message.chat.id]['episodes'] = {ep['episode']: ep['session'] for ep in episodes}
 
+    # Create episode buttons as before
     episode_buttons = [
         [InlineKeyboardButton(f"Episode {ep['episode']}", callback_data=f"ep_{ep['episode']}")]
         for ep in episodes
     ]
 
+    # Add "Download All Episodes" button at the top
+    episode_buttons.insert(0, [InlineKeyboardButton("⬇️ Download All Episodes", callback_data="dl_all")])
 
     # Add navigation buttons for pagination
     nav_buttons = []
@@ -152,7 +108,6 @@ def episode_list(client, callback_query, page=1):
 
     reply_markup = InlineKeyboardMarkup(episode_buttons)
 
-    # If it's the first time, send a message, otherwise edit the existing one
     if callback_query.message.reply_markup is None:
         callback_query.message.reply_text(f"Page {page}/{last_page}: Select an episode:", reply_markup=reply_markup)
     else:
