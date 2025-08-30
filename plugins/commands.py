@@ -16,6 +16,143 @@ import asyncio
 user_queries = {}
 
 
+
+
+# new comnd to dl all epi
+
+@Client.on_callback_query(filters.regex(r"^dl_all$"))
+def download_all_episodes(client, callback_query):
+    user_id = callback_query.message.chat.id
+    session_data = episode_data.get(user_id)
+
+    if not session_data:
+        callback_query.message.reply_text("Session data not found.")
+        return
+
+    session_id = session_data['session_id']
+    current_page = session_data.get('current_page', 1)
+    last_page = session_data.get('last_page', 1)
+    anime_title = session_data.get('title', 'Unknown Title')
+
+    # Send initial status message
+    status_msg = callback_query.message.reply_text(
+        f"🔄 Preparing to download all episodes of {anime_title}...\n"
+        "This might take some time. Episodes will be processed one by one."
+    )
+
+    try:
+        # Iterate through all pages
+        for page in range(1, last_page + 1):
+            episodes_url = f"https://animepahe.ru/api?m=release&id={session_id}&sort=episode_asc&page={page}"
+            response = session.get(episodes_url).json()
+            episodes = response['data']
+
+            # Process each episode on the current page
+            for ep in episodes:
+                episode_number = ep['episode']
+                episode_session = ep['session']
+                
+                # Get the episode page URL
+                episode_url = f"https://animepahe.ru/play/{session_id}/{episode_session}"
+                
+                try:
+                    # Fetch download links
+                    response = session.get(episode_url)
+                    soup = BeautifulSoup(response.content, "html.parser")
+                    download_links = soup.select("#pickDownload a.dropdown-item")
+
+                    if download_links:
+                        # Get the highest quality link (usually the first one)
+                        download_url = download_links[0]['href']
+                        
+                        # Get direct download link
+                        direct_link = get_dl_link(download_url)
+                        
+                        # Add to queue
+                        username = callback_query.from_user.username or "Unknown User"
+                        add_to_queue(user_id, username, direct_link)
+
+                        # Create filename
+                        resolution = "720p"  # Default resolution
+                        res_match = re.search(r"\b\d{3,4}p\b", download_links[0].get_text(strip=True))
+                        if res_match:
+                            resolution = res_match.group()
+
+                        type = "Sub"  # Default type
+                        if 'eng' in download_links[0].get_text(strip=True).lower():
+                            type = "Dub"
+
+                        short_name = create_short_name(anime_title)
+                        file_name = f"[{type}] [{short_name}] [EP {episode_number}] [{resolution}].mp4"
+                        file_name = sanitize_filename(file_name)
+
+                        # Set up download path
+                        random_str = random_string(5)
+                        user_download_dir = os.path.join(DOWNLOAD_DIR, str(user_id), random_str)
+                        os.makedirs(user_download_dir, exist_ok=True)
+                        download_path = os.path.join(user_download_dir, file_name)
+
+                        # Update status message
+                        status_msg.edit_text(
+                            f"📥 Downloading Episode {episode_number}/{len(episodes)} "
+                            f"(Page {page}/{last_page})\n"
+                            f"Current file: {file_name}"
+                        )
+
+                        # Download and upload the file
+                        download_file(direct_link, download_path)
+                        
+                        # Get thumbnail
+                        user_thumbnail = get_thumbnail(user_id)
+                        poster_url = session_data.get("poster", None)
+                        thumb_path = None
+
+                        if user_thumbnail:
+                            thumb_path = client.download_media(user_thumbnail)
+                        elif poster_url:
+                            response = requests.get(poster_url, stream=True)
+                            thumb_path = f"{user_download_dir}/thumb_file.jpg"
+                            with open(thumb_path, 'wb') as thumb_file:
+                                for chunk in response.iter_content(1024):
+                                    thumb_file.write(chunk)
+
+                        # Upload file
+                        user_caption = get_caption(user_id)
+                        caption_to_use = user_caption if user_caption else file_name
+                        send_and_delete_file(client, user_id, download_path, thumb_path, caption_to_use, user_id)
+                        
+                        # Cleanup
+                        remove_from_queue(user_id, direct_link)
+                        if thumb_path and os.path.exists(thumb_path):
+                            os.remove(thumb_path)
+                        if user_download_dir and os.path.exists(user_download_dir):
+                            remove_directory(user_download_dir)
+
+                except Exception as e:
+                    status_msg.edit_text(
+                        f"⚠️ Error processing Episode {episode_number}: {str(e)}\n"
+                        "Continuing with next episode..."
+                    )
+                    continue
+
+        # Final success message
+        status_msg.edit_text(
+            f"✅ Completed downloading all episodes of {anime_title}!\n"
+            "All episodes have been processed and uploaded."
+        )
+
+    except Exception as e:
+        status_msg.edit_text(
+            f"❌ Error during batch download: {str(e)}\n"
+            "Some episodes may not have been downloaded."
+        )
+
+
+
+
+
+
+
 @Client.on_message(filters.command("start") & filters.private & filters.user(ADMIN))
 def start(client, message):
     # Choose a random image from the list
