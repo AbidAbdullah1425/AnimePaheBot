@@ -291,6 +291,81 @@ def download_and_upload_file(client, callback_query):
     except Exception as e:
         callback_query.message.reply_text(f"Error: {str(e)}")
 
+
+
+
+
+@Client.on_callback_query(filters.regex(r"^dl_all$"))
+def download_all_episodes(client, callback_query):
+    user_id = callback_query.message.chat.id
+    session_data = episode_data.get(user_id)
+    
+    if not session_data:
+        callback_query.message.reply_text("Session data not found.")
+        return
+        
+    session_id = session_data['session_id']
+    title = session_data.get('title', 'Unknown Title')
+    
+    # Get first page to get total pages
+    episodes_url = f"https://animepahe.ru/api?m=release&id={session_id}&sort=episode_asc&page=1"
+    response = session.get(episodes_url).json()
+    total_pages = response["last_page"]
+    
+    # Send status message
+    status_msg = callback_query.message.reply_text(f"🎯 Starting batch download for: {title}")
+    
+    # Process each page
+    for page in range(1, total_pages + 1):
+        episodes_url = f"https://animepahe.ru/api?m=release&id={session_id}&sort=episode_asc&page={page}"
+        response = session.get(episodes_url).json()
+        episodes = response['data']
+        
+        # Update episodes data
+        episode_data[user_id]['episodes'] = {ep['episode']: ep['session'] for ep in episodes}
+        
+        # Process each episode
+        for ep in episodes:
+            episode_number = ep['episode']
+            episode_session = ep['session']
+            
+            # Update status
+            status_msg.edit_text(f"⏳ Processing Episode {episode_number}")
+            
+            # Get episode page
+            episode_url = f"https://animepahe.ru/play/{session_id}/{episode_session}"
+            response = session.get(episode_url)
+            soup = BeautifulSoup(response.content, "html.parser")
+            
+            # Get download links
+            download_links = soup.select("#pickDownload a.dropdown-item")
+            if download_links:
+                # Get highest quality link
+                download_url = download_links[0]['href']
+                episode_data[user_id]['current_episode'] = episode_number
+                
+                # Create callback data and reuse existing download function
+                dl_callback = CallbackQuery(
+                    id=callback_query.id,
+                    from_user=callback_query.from_user,
+                    chat_instance=callback_query.chat_instance,
+                    message=callback_query.message,
+                    data=f"dl_{download_url}",
+                    inline_message_id=None
+                )
+                
+                try:
+                    download_and_upload_file(client, dl_callback)
+                except Exception as e:
+                    status_msg.edit_text(f"❌ Error on episode {episode_number}: {str(e)}")
+                    continue
+
+
+
+
+
+
+
 # Callback query handler for Help and Close buttons
 @Client.on_callback_query()
 def callback_query_handler(client, callback_query):
