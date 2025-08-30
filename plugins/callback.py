@@ -296,69 +296,87 @@ def download_and_upload_file(client, callback_query):
 
 
 @Client.on_callback_query(filters.regex(r"^dl_all$"))
-def download_all_episodes(client, callback_query):
+async def download_all_episodes(client, callback_query):
     user_id = callback_query.message.chat.id
     session_data = episode_data.get(user_id)
     
     if not session_data:
-        callback_query.message.reply_text("Session data not found.")
+        await callback_query.message.reply_text("Session data not found.")
         return
         
     session_id = session_data['session_id']
     title = session_data.get('title', 'Unknown Title')
     
-    # Get first page to get total pages
-    episodes_url = f"https://animepahe.ru/api?m=release&id={session_id}&sort=episode_asc&page=1"
-    response = session.get(episodes_url).json()
-    total_pages = response["last_page"]
-    
     # Send status message
-    status_msg = callback_query.message.reply_text(f"🎯 Starting batch download for: {title}")
+    status_msg = await callback_query.message.reply_text(f"🎯 Starting batch download for: {title}")
     
-    # Process each page
-    for page in range(1, total_pages + 1):
-        episodes_url = f"https://animepahe.ru/api?m=release&id={session_id}&sort=episode_asc&page={page}"
+    try:
+        # Get first page to get total pages
+        episodes_url = f"https://animepahe.ru/api?m=release&id={session_id}&sort=episode_asc&page=1"
         response = session.get(episodes_url).json()
-        episodes = response['data']
+        total_pages = response["last_page"]
+        failed_episodes = []
         
-        # Update episodes data
-        episode_data[user_id]['episodes'] = {ep['episode']: ep['session'] for ep in episodes}
-        
-        # Process each episode
-        for ep in episodes:
-            episode_number = ep['episode']
-            episode_session = ep['session']
-            
-            # Update status
-            status_msg.edit_text(f"⏳ Processing Episode {episode_number}")
-            
-            # Get episode page
-            episode_url = f"https://animepahe.ru/play/{session_id}/{episode_session}"
-            response = session.get(episode_url)
-            soup = BeautifulSoup(response.content, "html.parser")
-            
-            # Get download links
-            download_links = soup.select("#pickDownload a.dropdown-item")
-            if download_links:
-                # Get highest quality link
-                download_url = download_links[0]['href']
-                episode_data[user_id]['current_episode'] = episode_number
+        for page in range(1, total_pages + 1):
+            try:
+                episodes_url = f"https://animepahe.ru/api?m=release&id={session_id}&sort=episode_asc&page={page}"
+                response = session.get(episodes_url).json()
+                episodes = response['data']
                 
-                # Create callback data and reuse existing download function
-                dl_callback = CallbackQuery(
-                    id=callback_query.id,
-                    from_user=callback_query.from_user,
-                    chat_instance=callback_query.chat_instance,
-                    message=callback_query.message,
-                    data=f"dl_{download_url}",
-                    inline_message_id=None
-                )
+                episode_data[user_id]['episodes'] = {ep['episode']: ep['session'] for ep in episodes}
                 
-                try:
-                    download_and_upload_file(client, dl_callback)
-                except Exception as e:
-                    status_msg.edit_text(f"❌ Error on episode {episode_number}: {str(e)}")
-                    continue
+                for ep in episodes:
+                    try:
+                        episode_number = ep['episode']
+                        episode_session = ep['session']
+                        
+                        await status_msg.edit_text(f"⏳ Processing Episode {episode_number} (Page {page}/{total_pages})")
+                        
+                        episode_url = f"https://animepahe.ru/play/{session_id}/{episode_session}"
+                        response = session.get(episode_url)
+                        soup = BeautifulSoup(response.content, "html.parser")
+                        
+                        download_links = soup.select("#pickDownload a.dropdown-item")
+                        if download_links:
+                            download_url = download_links[0]['href']
+                            episode_data[user_id]['current_episode'] = episode_number
+                            
+                            try:
+                                direct_link = get_dl_link(download_url)
+                                if direct_link and "Failed to extract" not in direct_link:
+                                    dl_callback = CallbackQuery(
+                                        id=callback_query.id,
+                                        from_user=callback_query.from_user,
+                                        chat_instance=callback_query.chat_instance,
+                                        message=callback_query.message,
+                                        data=f"dl_{download_url}",
+                                        inline_message_id=None
+                                    )
+                                    await download_and_upload_file(client, dl_callback)
+                                    await asyncio.sleep(2)  # Add delay between episodes
+                                else:
+                                    failed_episodes.append(episode_number)
+                            except Exception as e:
+                                failed_episodes.append(episode_number)
+                                continue
+                    except Exception as e:
+                        failed_episodes.append(episode_number)
+                        continue
+            except Exception as e:
+                await status_msg.edit_text(f"❌ Error on page {page}: {str(e)}")
+                continue
+                
+        # Final status
+        if failed_episodes:
+            await status_msg.edit_text(
+                f"✅ Batch download completed for {title}\n"
+                f"❌ Failed episodes: {', '.join(map(str, failed_episodes))}"
+            )
+        else:
+            await status_msg.edit_text(f"✅ All episodes downloaded successfully for {title}!")
+            
+    except Exception as e:
+        await status_msg.edit_text(f"❌ Error during batch download: {str(e)}")
 
 
 
